@@ -45,7 +45,7 @@ void barber::working()//记得每次输出之后把全部初始化，特别是on
     lock_for_seats.unlock();
     int waiting_time = generate_random_num(1,5);
     //std::cout<<"*工作时间: " + std::to_string(waiting_time) + "s 当前customer:" + std::to_string(current_customer_ID) +"\n";
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(6));
 
     std::lock_guard<std::mutex> lock_for_asleep(asleep_mutex);
     if (waiting_seats.empty())

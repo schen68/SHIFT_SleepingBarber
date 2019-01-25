@@ -36,3 +36,5 @@ Barber cutting the hair of customer 5
 Waiting room: 8 11 15 
 customer 16 17 leaving
 
+As it shown, the result is the same as the prediction.
+
