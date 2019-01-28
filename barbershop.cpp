@@ -6,102 +6,92 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
-//#include <time.h>
 #include "barbershop.h"
+
+int current_customer_ID = 0;
+bool asleep = true;
+int MAX_SEATS = 3;
 
 std::mutex seat_mutex;
 std::mutex batch_leaving_cus_mutex;
 std::mutex current_customer_mutex;
 std::mutex asleep_mutex;
-std::condition_variable go_to_sleep_cv;
+std::condition_variable wake_up_cv;
 
-int current_customer_ID = 0;
-bool asleep = true;
-int MAX_SEATS = 3;
-//std::queue<int> waiting_seats;
 std::vector<int> waiting_seats;
 std::vector<int> batch_leaving_cus;
 
-int generate_random_num(int min, int max)
-{
-    unsigned time_seed = static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-    std::mt19937 rand_num_generator(time_seed);
-    std::uniform_int_distribution<int> dist(min, max);
-    return dist(rand_num_generator);
-}
+bool logging = false; //whether print out the calling log info or not, it is just for debugging. By default, it's false
 
-void barber::working()//记得每次输出之后把全部初始化，特别是one_batch_leaving
-{//std::cout<<"\n这里是: barber::working()\n";
+void barber::working()
+{
+    if (logging) std::cout << "\n[logging]: barber::working()\n"; // logging info
+
     std::unique_lock<std::mutex> lock_for_current_customer(current_customer_mutex, std::defer_lock);
     std::unique_lock<std::mutex> lock_for_seats(seat_mutex, std::defer_lock);
     std::lock(lock_for_current_customer, lock_for_seats);
     if (!waiting_seats.empty())
     {
         current_customer_ID = waiting_seats.front();
-        //waiting_seats.pop();
         waiting_seats.erase(waiting_seats.begin());
     }
 
     lock_for_seats.unlock();
-    int waiting_time = generate_random_num(1,5);
-    //std::cout<<"*工作时间: " + std::to_string(waiting_time) + "s 当前customer:" + std::to_string(current_customer_ID) +"\n";
-    std::this_thread::sleep_for(std::chrono::seconds(6));
+
+    int working_time = std::rand() % 5000 + 1000; //To create the same random number, do not use srand or another way to create random numbers
+    std::this_thread::sleep_for(std::chrono::milliseconds(working_time));
+
+    if (logging) std::cout << "\n*[logging]: working time: " + std::to_string(working_time) + "ms | current customer:" + std::to_string(current_customer_ID) +"\n";
 
     std::lock_guard<std::mutex> lock_for_asleep(asleep_mutex);
     if (waiting_seats.empty())
         asleep = true;
 }
 
+/*
+ * if the barber finds that there is no cus in the waiting room, it goes to sleep.
+ * It means that gos into the "while" loop, and runs the loop one time, then locks and wait for the signal of wake_up_cv
+ * at this time, a new cus arrives, cus calls the customer::wakingup_barber(), which turns asleep to false, and gives the signal
+ * the barber goes forward, and the asleep is false, so it goes out and calls barber::working()
+ */
 void barber::sleeping()
-{//std::cout<<"\n这里是:barber::sleeping()\n";
+{
+    if (logging) std::cout << "\n[logging]: barber::sleeping(): " + std::string (asleep ? "YES" : "NO") + "\n";// logging info
+
     std::unique_lock<std::mutex> lock_for_asleep(asleep_mutex);
     while (asleep && waiting_seats.empty())
     {
-        std::cout << "\nBarber sleeping" << std::endl << "Waiting room:" << std::endl;
-        go_to_sleep_cv.wait(lock_for_asleep);
+        std::cout << "\n" + std::string(logging ? "----->" : "") + "Barber sleeping" << std::endl << std::string(logging ? "----->" : "") + "Waiting room:" << std::endl;
+        wake_up_cv.wait(lock_for_asleep);
     }
 }
 
-void barber::wakingup(int ID)
-{//std::cout<<"\n这里是:barber::wakingup()\n";
-    std::unique_lock<std::mutex> lock_for_waking_up(asleep_mutex, std::defer_lock);
-    std::unique_lock<std::mutex> lock_for_current_customer(current_customer_mutex, std::defer_lock);
-    std::lock(lock_for_current_customer, lock_for_waking_up);
-    asleep = false;
-    current_customer_ID = ID;
-}
-
-void barber::execute()
-{//std::cout<<"\n这里是:barber::execute()\n";
-    int counter = 0;
+void barber::execute(int _MAX_SEATS)
+{
+    MAX_SEATS = _MAX_SEATS;
+    if (logging) std::cout << "\n[logging]: barber::execute()\n";// logging info
     while (true)
     {
-        //std::cout<<std::endl<< ++counter<<std::endl;
         sleeping();
         working();
-
-        std::lock_guard<std::mutex> lock_for_print(batch_leaving_cus_mutex);/////////////
-        std::cout << "\nBarber cutting the hair of customer " << current_customer_ID << std::endl
-                  << "Waiting room: ";
-//        std::queue<int> queue_copy_for_print = waiting_seats;
-//        while (!queue_copy_for_print.empty())
-//        {
-//            std::cout << queue_copy_for_print.front() << " ";
-//            queue_copy_for_print.pop();
-//        }
+        /*
+         * if print out logging information,
+         * use "----->" to high line the cutting, waiting and leaving information
+         */
+        std::lock_guard<std::mutex> lock_for_print(batch_leaving_cus_mutex);
+        std::cout << "\n" + std::string(logging ? "----->" : "") + "Barber cutting the hair of customer " << current_customer_ID << std::endl
+                  << std::string(logging ? "----->" : "") + "Waiting room: ";
         for_each(waiting_seats.begin(), waiting_seats.end(), [](int i){std::cout << i << " ";});
         std::cout << std::endl;
 
         if (!batch_leaving_cus.empty())
         {
-            std::cout << "customer ";
+            std::cout << std::string(logging ? "----->" : "") + "customer ";
             for_each(batch_leaving_cus.begin(), batch_leaving_cus.end(), [](int i){std::cout << i << " ";});
             std::cout << "leaving" << std::endl;
 
             batch_leaving_cus.clear();
         }
-
-
     }
 }
 
@@ -110,65 +100,69 @@ customer::customer(int _id)
     ID = _id;
 }
 
-void customer::leaving()
+void customer::leaving(int _ID)
 {
-    std::string a = "\n这里是:customer::leaving() ID:" + std::to_string(ID) + '\n';
-    //std::cout<<a;
+    if (logging) std::cout << "\n[logging]: customer::leaving() ID:" + std::to_string(ID) + '\n';// logging info
+
     std::lock_guard<std::mutex> lock_for_leaving_notice(batch_leaving_cus_mutex);
-    //std::cout << "Customer " << ID << " leaving" << std::endl;
-    batch_leaving_cus.push_back(ID);
+    batch_leaving_cus.push_back(_ID);
 }
 
-void customer::waiting()
+void customer::waiting(int _ID)
 {
-    std::string a = "\n这里是:customer::waiting() ID:" + std::to_string(ID) + '\n';
-    //std::cout<<a;
-//    std::unique_lock<std::mutex> lock_for_asleep(asleep_mutex, std::defer_lock);
-    std::unique_lock<std::mutex> lock_for_waiting_seats(seat_mutex);//, std::defer_lock);
-//    std::lock(lock_for_asleep, lock_for_waiting_seats);
-//
-//    asleep = false;////////////////////要不要存疑
-    waiting_seats.push_back(ID);
+    if (logging) std::cout << "\n[logging]: customer::waiting() ID:" + std::to_string(ID) + '\n';// logging info
+    std::unique_lock<std::mutex> lock_for_waiting_seats(seat_mutex);
+    waiting_seats.push_back(_ID);
+}
+/*
+ * actually, I don't want to create this function, but you said waking up the barber is a task, so I create wakingup_barber()
+ *
+ * in this way, if a customer arrives, no one in th waiting room and the barber is sleeping,
+ * the customer wakes up the barber and gets cutting directly. the cus will not go into the waiting room.
+ *
+ * Actually, the cus could go into the waiting room and wait for barber to take it to the current_customer_ID.
+ *
+ * both two ways work
+ */
+void customer::wakingup_barber(int _ID)//
+{
+    if (logging) std::cout << "\n[logging]: customer::wakingup_barber() ID:" + std::to_string(_ID) + '\n';// logging info
+    std::unique_lock<std::mutex> lock_for_waking_up(asleep_mutex, std::defer_lock);
+    std::unique_lock<std::mutex> lock_for_current_customer(current_customer_mutex, std::defer_lock);
+    std::lock(lock_for_current_customer, lock_for_waking_up);
+    asleep = false;
+    current_customer_ID = _ID;
+
+    wake_up_cv.notify_all();
 }
 
-void customer::wakingup_barber(barber& b)
+void customer::arriving(int _ID)
 {
-    std::string a = "\n这里是:customer::wakingup_barber() ID:" + std::to_string(ID) + '\n';
-    //std::cout<<a;
-    b.wakingup(ID);
-}
+    ID = _ID;
 
-void customer::arriving(barber& b)
-{
-    std::string a = "\n这里是:customer::arriving() ID:" + std::to_string(ID) + '\n';
-    //std::cout<<a;
+    if (logging) std::cout << "\n[logging]: customer::arriving() ID:" + std::to_string(ID) + '\n';// logging info
+
     if (waiting_seats.size() == MAX_SEATS)
     {
-        std::string a = "\n他妈的这货跑了 ID:" + std::to_string(ID) + '\n';
-        //std::cout<<a;
-        leaving();
-
-    }
-    else if (waiting_seats.size() > MAX_SEATS)
-    {
-        std::cerr << "what?! the size of waiting_seats is larger than the MAX_SEATS?!" << std::endl;
+        if (logging) std::cout << "\n[logging]: leaving ID:" + std::to_string(ID) + '\n';// logging info
+        leaving(ID);
     }
     else if (asleep && waiting_seats.empty())
     {
-        std::string a = "\n唤醒了理发师 ID:" + std::to_string(ID) + '\n';
-        //std::cout<<a;
-        wakingup_barber(b);
-        go_to_sleep_cv.notify_all();
+        if (logging) std::cout << "\n[logging]: wake up the barber! ID:" + std::to_string(ID) + '\n';// logging info
+        wakingup_barber(ID);
     }
     else if (!asleep && waiting_seats.size() < MAX_SEATS)
     {
-        std::string a = "\n进入了等待室 ID:" + std::to_string(ID) + '\n';
-        //std::cout<<a;
-        waiting();
-        //go_to_sleep_cv.notify_all();
+        if (logging) std::cout << "\n[logging]: go into waiting room! ID:" + std::to_string(ID) + '\n';// logging info
+        waiting(ID);
+    }
+    else if (waiting_seats.size() > MAX_SEATS) //from here to the end, the code is not meaningful, it just helps me to catch errors, and no error occurs
+    {
+        std::cerr << "what?! the size of waiting_seats is larger than the MAX_SEATS?!" << std::endl;
     }
     else
     {
-        std::cerr<<"\n进入了坑爹领域: ID:" + std::to_string(ID) + "; 等待室size:" + std::to_string(waiting_seats.size()) + "; 是否在睡觉:" +std::to_string(asleep) + "\n";
+        std::cerr<<"\nserious error: ID:" + std::to_string(ID) + "; waiting room size:" + std::to_string(waiting_seats.size()) + "; asleep:" +std::to_string(asleep) + "\n";
     }
 }

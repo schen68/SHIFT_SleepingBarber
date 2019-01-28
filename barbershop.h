@@ -14,17 +14,11 @@
 class barber
 {
 private:
-    //int customer_getting_haircut_ID;
-    //bool status_of_sleeping = false;
-
     void working();
     void sleeping();
 
 public:
-    //~barber();
-    void wakingup(int ID);
-    //bool issleeping();
-    void execute();
+    void execute(int _MAX_SEATS);
 };
 
 class customer
@@ -32,14 +26,13 @@ class customer
 private:
     int ID;
 
-    void leaving();
-    void waiting();
-    void wakingup_barber(barber& b);
+    void leaving(int _ID);
+    void waiting(int _ID);
+    void wakingup_barber(int _ID);
 
 public:
     explicit customer(int _id);
-    //~customer();
-    void arriving(barber& b);
+    void arriving(int _ID);
 };
 
 #endif //SHIFT_SLEEPINGBARBER_BARBERSHOP_H
