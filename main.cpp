@@ -9,7 +9,8 @@ void creating_new_customer()
     customer c(0);
     for (int i = 1;; ++i)
     {
-        std::thread t(&customer::arriving, std::ref(c), i);
+        //std::thread t(&customer::arriving, std::ref(c), i);
+        std::thread t(&customer::arriving, &c, i); //g++ does not support std::ref()
         t.detach();
         std::this_thread::sleep_for(std::chrono::seconds(3));
     }
@@ -29,7 +30,8 @@ int main(int argc, char** argv)
     cout << "start in 3s ..." << endl;
     this_thread::sleep_for(std::chrono::seconds(3));
 
-    thread barber_thread(&barber::execute, std::ref(b), std::ref(max_seat));
+    //thread barber_thread(&barber::execute, std::ref(b), std::ref(max_seat));
+    thread barber_thread(&barber::execute, &b, max_seat); //g++ does not support std::ref()
     thread creating_thread(&creating_new_customer);
     barber_thread.join();
     creating_thread.join();
