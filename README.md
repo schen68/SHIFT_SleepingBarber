@@ -24,7 +24,8 @@ to run it
 
 P.S. I used a variable, "logging", to decide whether print out the logging information. It's false, by default.
 
-_1.Test(work 1-5s randomly):_
+_1.Test(work 1-5s randomly):_<br/>
+Actually, if it is easy to see cus leaves, the code is totally wrong! The expectation of working time is 3. other word, the speed of generating cus is almost equal to the speed of working. To make some cus leave, I changed the code and made it wrong. the result of 1-5 working time. but now it is right.
 ```
 Barber sleeping
 Waiting room:
@@ -82,7 +83,53 @@ Barber cutting the hair of customer 14
 Waiting room: 15 16 18
 ```
 
+It should be:
+```
+Barber sleeping
+Waiting room:
 
+Barber cutting the hair of customer 1
+Waiting room:
+
+Barber sleeping
+Waiting room:
+
+Barber cutting the hair of customer 2
+Waiting room:
+
+Barber cutting the hair of customer 3
+Waiting room:
+
+Barber sleeping
+Waiting room:
+
+Barber cutting the hair of customer 4
+Waiting room: 5
+
+Barber cutting the hair of customer 5
+Waiting room: 6
+
+Barber cutting the hair of customer 6
+Waiting room: 7
+
+Barber cutting the hair of customer 7
+Waiting room:
+
+Barber sleeping
+Waiting room:
+
+Barber cutting the hair of customer 8
+Waiting room:
+
+Barber sleeping
+Waiting room:
+
+Barber cutting the hair of customer 9
+Waiting room: 10
+
+Barber cutting the hair of customer 10
+Waiting room: 11
+```
 As it shown, the result is the same as the prediction.
 
 _2. Test (work 1s):_
