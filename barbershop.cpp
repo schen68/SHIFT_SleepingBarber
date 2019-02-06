@@ -6,6 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <algorithm>
 #include "barbershop.h"
 
 int current_customer_ID = 0;
@@ -23,6 +24,14 @@ std::vector<int> batch_leaving_cus;
 
 bool logging = false; //whether print out the calling log info or not, it is just for debugging. By default, it's false
 
+int generate_random_num(int min, int max)
+{
+    unsigned time_seed = static_cast<unsigned int>(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    std::mt19937 rand_num_generator(time_seed);
+    std::uniform_int_distribution<int> dist(min, max);
+    return dist(rand_num_generator);
+}
+
 void barber::working()
 {
     if (logging) std::cout << "\n[logging]: barber::working()\n"; // logging info
@@ -38,8 +47,8 @@ void barber::working()
 
     lock_for_seats.unlock();
 
-    int working_time = std::rand() % 5000 + 1000; //To create the same random number, do not use srand or another way to create random numbers
-    std::this_thread::sleep_for(std::chrono::milliseconds(working_time));
+    int working_time = generate_random_num(1, 5);
+    std::this_thread::sleep_for(std::chrono::seconds(working_time));
 
     if (logging) std::cout << "\n*[logging]: working time: " + std::to_string(working_time) + "ms | current customer:" + std::to_string(current_customer_ID) +"\n";
 
