@@ -14,11 +14,11 @@ then use
 ```
 to run it
 ## Implement detial
-1. route map
+1. route map<br/>
   create two threads. The first thread is to simulate the barber, which is rely on barber class; the other thread is for infinitely creating threads that are to simulate customers. 
   The barber, the class, has a mainly executive function to sleep, working, and show the status at every stage, and the status includes who are getting cutting, who are in the waiting room and the people who leave.
   The customer class also has a mainly excutive fucntion called arriving. When one thread of the customer is created, the thread checks whether the barber is asleep or not and the waiting seats to determine what to do. If the barber is asleep, wake it up through the function provided as public method of the barber class.
-2. classes
+2. classes<br/>
   There are two classes, barber and customer.
 ## Test
 
