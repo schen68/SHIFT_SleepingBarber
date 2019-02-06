@@ -6,7 +6,7 @@ download the source and open it from clion
 
 If you use linux with g++, the compilation commander is
 ```
-g++ -std=c++11 -pthread  barbershop.cpp main.cpp -o run -std=c++11
+g++ -std=c++11 -pthread  barbershop.cpp main.cpp -o run
 ```
 then use
 ```
